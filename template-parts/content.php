@@ -6,7 +6,7 @@
 	<?php endif; ?>
 
 	<div class="p-6">
-		<div class="flex items-center gap-2 mb-3">
+		<div class="flex flex-wrap items-center gap-2 mb-3">
 			<?php
 			$categories = get_the_category();
 			if ( ! empty( $categories ) ) {

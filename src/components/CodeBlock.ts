@@ -1,10 +1,37 @@
+import Prism from 'prismjs';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-bash';
+import 'prismjs/themes/prism-tomorrow.css';
+
+declare global {
+  interface Window {
+    devminimalData: {
+      menu: Array<{ title: string; url: string }>;
+      sns: { github?: string; twitter?: string; qiita?: string; zenn?: string };
+      home: string;
+      code: { bg: string; lineNumbers: boolean };
+    };
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const codeBlocks = document.querySelectorAll('pre');
+  const codeConfig = window.devminimalData?.code || { bg: '#1d1f21', lineNumbers: true };
 
   codeBlocks.forEach((block) => {
+    const code = block.querySelector('code');
+    if (!code) return;
+
+    // Apply Prism
+    Prism.highlightElement(code);
+
     // Create container
     const container = document.createElement('div');
-    container.className = 'my-6 rounded-lg overflow-hidden border shadow-sm bg-[#1e1e1e] text-white font-mono text-sm';
+    container.className = 'my-6 rounded-lg overflow-hidden border shadow-sm text-white font-mono text-sm';
+    container.style.backgroundColor = codeConfig.bg;
 
     // Create header (Mac Terminal style)
     const header = document.createElement('div');
@@ -18,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
       dots.appendChild(dot);
     });
 
-    const lang = block.querySelector('code')?.className.match(/language-(\w+)/)?.[1] || 'code';
+    const lang = code.className.match(/language-(\w+)/)?.[1] || 'code';
     const langLabel = document.createElement('span');
     langLabel.className = 'text-xs text-muted-foreground uppercase ml-4';
     langLabel.textContent = lang;
@@ -32,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     copyBtn.className = 'text-xs hover:text-primary transition-colors';
     copyBtn.textContent = 'Copy';
     copyBtn.onclick = () => {
-      const text = block.textContent || '';
+      const text = code.textContent || '';
       navigator.clipboard.writeText(text).then(() => {
         copyBtn.textContent = 'Copied!';
         setTimeout(() => copyBtn.textContent = 'Copy', 2000);
@@ -42,9 +69,17 @@ document.addEventListener('DOMContentLoaded', () => {
     header.appendChild(leftSide);
     header.appendChild(copyBtn);
 
+    // Line Numbers
+    if (codeConfig.lineNumbers) {
+      const lines = code.innerHTML.split('\n');
+      if (lines.length > 1) {
+          const numberedLines = lines.map((line, i) => `<span class="inline-block w-8 mr-4 text-right text-muted-foreground/40 select-none">${i + 1}</span>${line}`).join('\n');
+          code.innerHTML = numberedLines;
+      }
+    }
+
     // Style the original pre
-    block.className = 'p-4 overflow-x-auto';
-    block.style.margin = '0';
+    block.className = 'p-4 overflow-x-auto m-0 bg-transparent';
 
     // Wrap
     block.parentNode?.insertBefore(container, block);
