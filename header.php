@@ -37,7 +37,7 @@
 						'theme_location' => 'menu-1',
 						'menu_id'        => 'primary-menu',
 						'container'      => false,
-						'menu_class'     => 'flex gap-6',
+						'fallback_cb'    => false,
 					)
 				);
 				?>

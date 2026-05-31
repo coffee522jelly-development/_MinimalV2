@@ -50,12 +50,12 @@ get_header();
 						</div>
 					<?php endif; ?>
 					<div class="flex items-center gap-1">
-						<span>
+						<span class="reading-time-value">
                             <?php
                             $content = get_the_content();
                             $word_count = mb_strlen( strip_tags( $content ) );
                             $reading_time = ceil( $word_count / 500 );
-                            printf( esc_html__( 'Read: %d min', 'devminimal' ), $reading_time );
+                            printf( esc_html__( '%d min', 'devminimal' ), $reading_time );
                             ?>
                         </span>
 					</div>
