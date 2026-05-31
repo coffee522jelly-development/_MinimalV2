@@ -12,12 +12,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function devminimal_switch_locale( $locale ) {
     if ( isset( $_GET['lang'] ) ) {
-        if ( $_GET['lang'] == 'ja' ) {
-            return 'ja';
-        } elseif ( $_GET['lang'] == 'en' ) {
-            return 'en_US';
-        }
+        $lang = sanitize_text_field( $_GET['lang'] );
+        setcookie( 'devminimal_lang', $lang, time() + ( 86400 * 30 ), COOKIEPATH, COOKIE_DOMAIN );
+        $_COOKIE['devminimal_lang'] = $lang;
     }
+
+    $cookie_lang = isset( $_COOKIE['devminimal_lang'] ) ? $_COOKIE['devminimal_lang'] : '';
+    if ( $cookie_lang == 'ja' ) {
+        return 'ja';
+    } elseif ( $cookie_lang == 'en' ) {
+        return 'en_US';
+    }
+
     return $locale;
 }
 add_filter( 'locale', 'devminimal_switch_locale' );
@@ -95,13 +101,27 @@ function devminimal_scripts() {
         if ( isset( $locations['menu-1'] ) ) {
             $menu_items = wp_get_nav_menu_items( $locations['menu-1'] );
         }
+
         $menu_data = array();
         if ($menu_items) {
+            $child_items = array();
             foreach ($menu_items as $item) {
-                $menu_data[] = array(
-                    'title' => $item->title,
-                    'url'   => $item->url,
-                );
+                if ($item->menu_item_parent != 0) {
+                    $child_items[$item->menu_item_parent][] = array(
+                        'title' => $item->title,
+                        'url'   => $item->url,
+                    );
+                }
+            }
+
+            foreach ($menu_items as $item) {
+                if ($item->menu_item_parent == 0) {
+                    $menu_data[] = array(
+                        'title'    => $item->title,
+                        'url'      => $item->url,
+                        'children' => isset($child_items[$item->ID]) ? $child_items[$item->ID] : array(),
+                    );
+                }
             }
         }
 
@@ -116,6 +136,16 @@ function devminimal_scripts() {
             'menu' => $menu_data,
             'sns'  => $sns_data,
             'home' => home_url('/'),
+            'code' => array(
+                'bg' => get_theme_mod( 'devminimal_code_bg_color', '#1d1f21' ),
+                'lineNumbers' => get_theme_mod( 'devminimal_code_line_numbers', true ),
+            ),
+            'fab' => array(
+                'apps' => get_theme_mod( 'devminimal_fab_apps', '?type=app' ),
+                'projects' => get_theme_mod( 'devminimal_fab_projects', '/projects' ),
+                'about' => get_theme_mod( 'devminimal_fab_about', '/about' ),
+                'contact' => get_theme_mod( 'devminimal_fab_contact', '/contact' ),
+            ),
         ) );
     }
 }
@@ -200,33 +230,24 @@ function devminimal_post_template_callback( $post ) {
 }
 
 function devminimal_app_info_callback( $post ) {
-    $app_name = get_post_meta( $post->ID, '_devminimal_app_name', true );
-    $app_subtitle = get_post_meta( $post->ID, '_devminimal_app_subtitle', true );
-    $app_website = get_post_meta( $post->ID, '_devminimal_app_website', true );
-    $app_github = get_post_meta( $post->ID, '_devminimal_app_github', true );
-    $app_stack = get_post_meta( $post->ID, '_devminimal_app_stack', true );
-    ?>
-    <p>
-        <label for="devminimal_app_name">App Name</label><br>
-        <input type="text" name="devminimal_app_name" value="<?php echo esc_attr( $app_name ); ?>" class="widefat">
-    </p>
-    <p>
-        <label for="devminimal_app_subtitle">Subtitle</label><br>
-        <input type="text" name="devminimal_app_subtitle" value="<?php echo esc_attr( $app_subtitle ); ?>" class="widefat">
-    </p>
-    <p>
-        <label for="devminimal_app_website">Website URL</label><br>
-        <input type="url" name="devminimal_app_website" value="<?php echo esc_url( $app_website ); ?>" class="widefat">
-    </p>
-    <p>
-        <label for="devminimal_app_github">GitHub URL</label><br>
-        <input type="url" name="devminimal_app_github" value="<?php echo esc_url( $app_github ); ?>" class="widefat">
-    </p>
-    <p>
-        <label for="devminimal_app_stack">Tech Stack (comma separated)</label><br>
-        <input type="text" name="devminimal_app_stack" value="<?php echo esc_attr( $app_stack ); ?>" class="widefat" placeholder="React, Tailwind, WordPress">
-    </p>
-    <?php
+    $fields = array(
+        '_devminimal_app_name' => 'App Name',
+        '_devminimal_app_subtitle' => 'Subtitle',
+        '_devminimal_app_website' => 'Website URL',
+        '_devminimal_app_github' => 'GitHub URL',
+        '_devminimal_app_appstore' => 'App Store URL',
+        '_devminimal_app_googleplay' => 'Google Play URL',
+        '_devminimal_app_stack' => 'Tech Stack (comma separated)',
+        '_devminimal_app_price' => 'Price',
+        '_devminimal_app_os' => 'Supported OS',
+        '_devminimal_app_status' => 'Dev Status',
+        '_devminimal_app_screenshots' => 'Screenshot URLs (comma separated)',
+    );
+    foreach ($fields as $key => $label) {
+        $value = get_post_meta($post->ID, $key, true);
+        echo '<p><label>' . esc_html($label) . '</label><br>';
+        echo '<input type="text" name="' . esc_attr(substr($key, 1)) . '" value="' . esc_attr($value) . '" class="widefat"></p>';
+    }
 }
 
 function devminimal_release_info_callback( $post ) {
@@ -285,8 +306,26 @@ function devminimal_save_postdata( $post_id ) {
     if ( array_key_exists( 'devminimal_app_github', $_POST ) ) {
         update_post_meta( $post_id, '_devminimal_app_github', esc_url_raw( $_POST['devminimal_app_github'] ) );
     }
+    if ( array_key_exists( 'devminimal_app_appstore', $_POST ) ) {
+        update_post_meta( $post_id, '_devminimal_app_appstore', esc_url_raw( $_POST['devminimal_app_appstore'] ) );
+    }
+    if ( array_key_exists( 'devminimal_app_googleplay', $_POST ) ) {
+        update_post_meta( $post_id, '_devminimal_app_googleplay', esc_url_raw( $_POST['devminimal_app_googleplay'] ) );
+    }
     if ( array_key_exists( 'devminimal_app_stack', $_POST ) ) {
         update_post_meta( $post_id, '_devminimal_app_stack', sanitize_text_field( $_POST['devminimal_app_stack'] ) );
+    }
+    if ( array_key_exists( 'devminimal_app_price', $_POST ) ) {
+        update_post_meta( $post_id, '_devminimal_app_price', sanitize_text_field( $_POST['devminimal_app_price'] ) );
+    }
+    if ( array_key_exists( 'devminimal_app_os', $_POST ) ) {
+        update_post_meta( $post_id, '_devminimal_app_os', sanitize_text_field( $_POST['devminimal_app_os'] ) );
+    }
+    if ( array_key_exists( 'devminimal_app_status', $_POST ) ) {
+        update_post_meta( $post_id, '_devminimal_app_status', sanitize_text_field( $_POST['devminimal_app_status'] ) );
+    }
+    if ( array_key_exists( 'devminimal_app_screenshots', $_POST ) ) {
+        update_post_meta( $post_id, '_devminimal_app_screenshots', sanitize_text_field( $_POST['devminimal_app_screenshots'] ) );
     }
     if ( array_key_exists( 'devminimal_release_version', $_POST ) ) {
         update_post_meta( $post_id, '_devminimal_release_version', sanitize_text_field( $_POST['devminimal_release_version'] ) );
@@ -408,7 +447,13 @@ function devminimal_custom_css() {
             --code-bg-custom: <?php echo esc_html($code_bg); ?>;
             --code-font-size-custom: <?php echo esc_html($code_font_size); ?>px;
         }
+        /* Handle Dark Mode Overrides if any specifically needed for Customizer colors */
+        .dark {
+            --primary: <?php echo esc_html($primary_hsl); ?>; /* Keep same or adjust for dark if needed */
+        }
         pre code { font-size: var(--code-font-size-custom) !important; }
+        .bg-muted { background-color: hsl(var(--muted)) !important; }
+        .text-muted-foreground { color: hsl(var(--muted-foreground)) !important; }
     </style>
     <?php
 }
@@ -420,6 +465,29 @@ add_action( 'wp_head', 'devminimal_custom_css' );
 function devminimal_handle_contact_form() {
     if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'devminimal_contact_form_verify' ) ) {
         wp_die( 'Security check failed' );
+    }
+
+    $site_key = get_theme_mod( 'devminimal_recaptcha_site_key' );
+    $secret_key = get_theme_mod( 'devminimal_recaptcha_secret_key' );
+    if ( $site_key && $secret_key ) {
+        if ( ! isset( $_POST['g-recaptcha-response'] ) || empty( $_POST['g-recaptcha-response'] ) ) {
+            wp_die( 'Please complete the CAPTCHA' );
+        }
+
+        $response = wp_remote_post( 'https://www.google.com/recaptcha/api/siteverify', array(
+            'body' => array(
+                'secret'   => $secret_key,
+                'response' => $_POST['g-recaptcha-response'],
+                'remoteip' => $_SERVER['REMOTE_ADDR'],
+            ),
+        ) );
+
+        $response_body = wp_remote_retrieve_body( $response );
+        $result = json_decode( $response_body );
+
+        if ( ! $result->success ) {
+            wp_die( 'reCAPTCHA verification failed' );
+        }
     }
 
     $name = sanitize_text_field( $_POST['name'] );
@@ -438,6 +506,56 @@ function devminimal_handle_contact_form() {
 }
 add_action( 'admin_post_nopriv_devminimal_contact_form', 'devminimal_handle_contact_form' );
 add_action( 'admin_post_devminimal_contact_form', 'devminimal_handle_contact_form' );
+
+/**
+ * Basic XML Sitemap
+ */
+function devminimal_xml_sitemap() {
+    if ( strpos( $_SERVER['REQUEST_URI'], '/sitemap.xml' ) !== false ) {
+        $posts = get_posts( array(
+            'numberposts' => 100,
+            'post_type'   => array( 'post', 'page' ),
+            'post_status' => 'publish',
+        ) );
+
+        header( 'Content-Type: application/xml; charset=utf-8' );
+        echo '<?xml version="1.0" encoding="UTF-8"?>';
+        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+
+        echo '<url><loc>' . home_url( '/' ) . '</loc><priority>1.0</priority></url>';
+
+        foreach ( $posts as $post ) {
+            echo '<url>';
+            echo '<loc>' . get_permalink( $post->ID ) . '</loc>';
+            echo '<lastmod>' . mysql2date( 'Y-m-d\TH:i:s+00:00', $post->post_modified_gmt, false ) . '</lastmod>';
+            echo '<priority>0.8</priority>';
+            echo '</url>';
+        }
+
+        echo '</urlset>';
+        exit;
+    }
+}
+add_action( 'template_redirect', 'devminimal_xml_sitemap' );
+
+/**
+ * Filter posts by type on home page
+ */
+function devminimal_filter_home_query( $query ) {
+    if ( ! is_admin() && $query->is_main_query() && ( is_home() || is_archive() ) ) {
+        if ( isset( $_GET['type'] ) && ! empty( $_GET['type'] ) && $_GET['type'] !== 'all' ) {
+            $meta_query = array(
+                array(
+                    'key'     => '_devminimal_post_type',
+                    'value'   => sanitize_text_field( $_GET['type'] ),
+                    'compare' => '=',
+                ),
+            );
+            $query->set( 'meta_query', $meta_query );
+        }
+    }
+}
+add_action( 'pre_get_posts', 'devminimal_filter_home_query' );
 
 /**
  * Customizer settings
@@ -506,5 +624,60 @@ function devminimal_customize_register( $wp_customize ) {
         'section'  => 'devminimal_code_block',
         'type'     => 'number',
     ) );
+
+    $wp_customize->add_setting( 'devminimal_code_line_numbers', array(
+        'default'           => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+    ) );
+    $wp_customize->add_control( 'devminimal_code_line_numbers', array(
+        'label'    => 'Show Line Numbers',
+        'section'  => 'devminimal_code_block',
+        'type'     => 'checkbox',
+    ) );
+
+    // Security Section
+    $wp_customize->add_section( 'devminimal_security', array(
+        'title'    => 'Security',
+        'priority' => 40,
+    ) );
+
+    $wp_customize->add_setting( 'devminimal_recaptcha_site_key', array(
+        'default'           => '',
+        'sanitize_callback' => 'sanitize_text_field',
+    ) );
+    $wp_customize->add_control( 'devminimal_recaptcha_site_key', array(
+        'label'    => 'reCAPTCHA Site Key (v2)',
+        'section'  => 'devminimal_security',
+        'type'     => 'text',
+    ) );
+
+    $wp_customize->add_setting( 'devminimal_recaptcha_secret_key', array(
+        'default'           => '',
+        'sanitize_callback' => 'sanitize_text_field',
+    ) );
+    $wp_customize->add_control( 'devminimal_recaptcha_secret_key', array(
+        'label'    => 'reCAPTCHA Secret Key',
+        'section'  => 'devminimal_security',
+        'type'     => 'text',
+    ) );
+
+    // FAB Section
+    $wp_customize->add_section( 'devminimal_fab', array(
+        'title'    => 'Floating Action Button',
+        'priority' => 45,
+    ) );
+
+    $fab_links = array( 'apps', 'projects', 'about', 'contact' );
+    foreach ( $fab_links as $link ) {
+        $wp_customize->add_setting( "devminimal_fab_$link", array(
+            'default'           => '',
+            'sanitize_callback' => 'sanitize_text_field',
+        ) );
+        $wp_customize->add_control( "devminimal_fab_$link", array(
+            'label'    => ucfirst($link) . ' URL or Slug',
+            'section'  => 'devminimal_fab',
+            'type'     => 'text',
+        ) );
+    }
 }
 add_action( 'customize_register', 'devminimal_customize_register' );

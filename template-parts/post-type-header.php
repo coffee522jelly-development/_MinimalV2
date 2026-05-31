@@ -6,40 +6,70 @@ if ( 'app' === $post_type ) :
     $app_subtitle = get_post_meta( get_the_ID(), '_devminimal_app_subtitle', true );
     $app_website = get_post_meta( get_the_ID(), '_devminimal_app_website', true );
     $app_github = get_post_meta( get_the_ID(), '_devminimal_app_github', true );
+    $app_appstore = get_post_meta( get_the_ID(), '_devminimal_app_appstore', true );
+    $app_googleplay = get_post_meta( get_the_ID(), '_devminimal_app_googleplay', true );
     $app_stack = get_post_meta( get_the_ID(), '_devminimal_app_stack', true );
+    $app_price = get_post_meta( get_the_ID(), '_devminimal_app_price', true );
+    $app_os = get_post_meta( get_the_ID(), '_devminimal_app_os', true );
+    $app_status = get_post_meta( get_the_ID(), '_devminimal_app_status', true );
+    $app_screenshots = get_post_meta( get_the_ID(), '_devminimal_app_screenshots', true );
     ?>
     <section class="mb-12 p-8 bg-muted rounded-2xl border flex flex-col md:flex-row gap-8 items-center md:items-start">
         <?php if ( has_post_thumbnail() ) : ?>
-            <div class="w-32 h-32 rounded-3xl overflow-hidden shadow-lg flex-shrink-0">
-                <?php the_post_thumbnail( 'thumbnail', array( 'class' => 'w-full h-full object-cover' ) ); ?>
+            <div class="w-32 h-32 rounded-3xl overflow-hidden shadow-lg flex-shrink-0 bg-background p-2 border">
+                <?php the_post_thumbnail( 'thumbnail', array( 'class' => 'w-full h-full object-contain rounded-2xl' ) ); ?>
             </div>
         <?php endif; ?>
 
         <div class="flex-grow text-center md:text-left">
-            <h2 class="text-3xl font-bold mb-2"><?php echo esc_html( $app_name ?: get_the_title() ); ?></h2>
+            <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
+                <h2 class="text-3xl font-bold"><?php echo esc_html( $app_name ?: get_the_title() ); ?></h2>
+                <?php if ( $app_status ) : ?>
+                    <span class="px-2 py-0.5 bg-accent text-accent-foreground text-xs font-bold rounded-full uppercase tracking-tighter"><?php echo esc_html($app_status); ?></span>
+                <?php endif; ?>
+            </div>
+
             <?php if ( $app_subtitle ) : ?>
                 <p class="text-lg text-muted-foreground mb-4"><?php echo esc_html( $app_subtitle ); ?></p>
             <?php endif; ?>
 
-            <?php if ( $app_stack ) : ?>
-                <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-6">
+            <div class="flex flex-wrap justify-center md:justify-start gap-4 text-xs mb-6 text-muted-foreground font-medium">
+                <?php if ( $app_price ) : ?>
+                    <span class="flex items-center gap-1 border-r pr-4 border-border last:border-0 last:pr-0">💰 <?php echo esc_html($app_price); ?></span>
+                <?php endif; ?>
+                <?php if ( $app_os ) : ?>
+                    <span class="flex items-center gap-1 border-r pr-4 border-border last:border-0 last:pr-0">💻 <?php echo esc_html($app_os); ?></span>
+                <?php endif; ?>
+                <?php if ( $app_stack ) : ?>
+                    <span class="flex items-center gap-1 border-r pr-4 border-border last:border-0 last:pr-0">🛠 <?php echo esc_html($app_stack); ?></span>
+                <?php endif; ?>
+            </div>
+
+            <div class="flex flex-wrap justify-center md:justify-start gap-3">
+                <?php if ( $app_website ) : ?>
+                    <a href="<?php echo esc_url( $app_website ); ?>" target="_blank" rel="noopener noreferrer" class="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:opacity-90 transition-opacity flex items-center gap-2"><span class="text-sm">Visit Website</span></a>
+                <?php endif; ?>
+                <?php if ( $app_github ) : ?>
+                    <a href="<?php echo esc_url( $app_github ); ?>" target="_blank" rel="noopener noreferrer" class="px-5 py-2 bg-secondary text-secondary-foreground border rounded-lg font-bold hover:bg-secondary/80 transition-colors flex items-center gap-2">GitHub</a>
+                <?php endif; ?>
+                <?php if ( $app_appstore ) : ?>
+                    <a href="<?php echo esc_url( $app_appstore ); ?>" target="_blank" rel="noopener noreferrer" class="px-5 py-2 bg-black text-white rounded-lg font-bold hover:opacity-80 transition-opacity flex items-center gap-2">App Store</a>
+                <?php endif; ?>
+                <?php if ( $app_googleplay ) : ?>
+                    <a href="<?php echo esc_url( $app_googleplay ); ?>" target="_blank" rel="noopener noreferrer" class="px-5 py-2 bg-[#3bccff] text-white rounded-lg font-bold hover:opacity-80 transition-opacity flex items-center gap-2">Google Play</a>
+                <?php endif; ?>
+            </div>
+
+            <?php if ( $app_screenshots ) : ?>
+                <div class="mt-8 flex gap-4 overflow-x-auto pb-4">
                     <?php
-                    $stacks = explode(',', $app_stack);
-                    foreach ($stacks as $stack) {
-                        echo '<span class="px-2 py-0.5 bg-background border rounded text-xs font-mono">' . esc_html(trim($stack)) . '</span>';
+                    $imgs = explode(',', $app_screenshots);
+                    foreach ($imgs as $img) {
+                        echo '<img src="' . esc_url(trim($img)) . '" class="h-48 rounded-lg shadow-md border" alt="Screenshot">';
                     }
                     ?>
                 </div>
             <?php endif; ?>
-
-            <div class="flex flex-wrap justify-center md:justify-start gap-4">
-                <?php if ( $app_website ) : ?>
-                    <a href="<?php echo esc_url( $app_website ); ?>" target="_blank" rel="noopener noreferrer" class="px-6 py-2 bg-primary text-primary-foreground rounded-full font-bold hover:opacity-90 transition-opacity"><?php _e('Visit Website', 'devminimal'); ?></a>
-                <?php endif; ?>
-                <?php if ( $app_github ) : ?>
-                    <a href="<?php echo esc_url( $app_github ); ?>" target="_blank" rel="noopener noreferrer" class="px-6 py-2 bg-secondary text-secondary-foreground border rounded-full font-bold hover:bg-secondary/80 transition-colors">GitHub</a>
-                <?php endif; ?>
-            </div>
         </div>
     </section>
 

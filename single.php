@@ -17,7 +17,7 @@ get_header();
 				<?php
 				if ( 'post' === get_post_type() ) :
 					?>
-					<div class="flex items-center gap-2 mb-4">
+					<div class="flex flex-wrap items-center gap-2 mb-4">
 						<?php
 						$categories = get_the_category();
 						if ( ! empty( $categories ) ) {

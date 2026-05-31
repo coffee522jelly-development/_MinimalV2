@@ -14,10 +14,28 @@ get_header();
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
             <div>
                 <?php if ( is_home() && ! is_front_page() ) : ?>
-                    <h1 class="text-3xl font-bold"><?php single_post_title(); ?></h1>
+                    <h1 class="text-3xl font-bold mb-4"><?php single_post_title(); ?></h1>
                 <?php else : ?>
-                    <h1 class="text-3xl font-bold"><?php esc_html_e( 'Latest Posts', 'devminimal' ); ?></h1>
+                    <h1 class="text-3xl font-bold mb-4"><?php esc_html_e( 'Latest Posts', 'devminimal' ); ?></h1>
                 <?php endif; ?>
+
+                <div class="flex flex-wrap gap-2">
+                    <?php
+                    $current_type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'all';
+                    $types = array(
+                        'all' => __('All', 'devminimal'),
+                        'normal' => __('Normal', 'devminimal'),
+                        'app' => __('Apps', 'devminimal'),
+                        'release' => __('Releases', 'devminimal'),
+                        'devlog' => __('Dev Logs', 'devminimal'),
+                    );
+                    foreach ($types as $slug => $label) {
+                        $url = ($slug === 'all') ? remove_query_arg('type') : add_query_arg('type', $slug);
+                        $active = ($current_type === $slug) ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80';
+                        echo '<a href="' . esc_url($url) . '" class="px-3 py-1 rounded-full text-xs font-bold transition-colors ' . $active . '">' . esc_html($label) . '</a>';
+                    }
+                    ?>
+                </div>
             </div>
 
             <div id="layout-switcher-root"></div>
